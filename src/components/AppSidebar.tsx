@@ -61,7 +61,25 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        <div className="mt-auto p-4 border-t">
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={() => {
+                  localStorage.removeItem('rebar_token');
+                  window.location.href = '/login';
+                }}
+                className="text-scrap hover:text-scrap/80 w-full justify-start"
+              >
+                <LayoutDashboard className="mr-2 h-4 w-4 rotate-180" />
+                {!collapsed && <span>Logout</span>}
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </div>
       </SidebarContent>
+
     </Sidebar>
   );
 }

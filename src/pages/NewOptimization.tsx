@@ -9,29 +9,77 @@ import { Upload, FileSpreadsheet, CheckCircle2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 
+import api from "@/lib/api";
+
 const steps = ["Job Setup", "Upload BBS", "Review & Run"];
 
 export default function NewOptimization() {
   const [step, setStep] = useState(0);
   const [jobName, setJobName] = useState("");
-  const [projectName, setProjectName] = useState("");
+  const [projectName, setProjectName] = useState(""); // This isn't in BE yet, I'll just use jobName for now or skip
   const [stockLength, setStockLength] = useState(12000);
   const [minOffcut, setMinOffcut] = useState(500);
   const [allowReuse, setAllowReuse] = useState(true);
   const [optMode, setOptMode] = useState("balanced");
   const [file, setFile] = useState<File | null>(null);
   const [optimizing, setOptimizing] = useState(false);
+  const [jobId, setJobId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleOptimize = () => {
-    setOptimizing(true);
-    setTimeout(() => {
-      setOptimizing(false);
-      toast({ title: "Optimization Complete", description: "156 stock bars — 2.8% waste achieved" });
-      navigate("/jobs/1");
-    }, 3000);
+  const handleCreateJob = async () => {
+    try {
+      const response = await api.post("/jobs", {
+        name: jobName,
+        stockLengthMm: stockLength,
+        minOffcutToSaveMm: minOffcut,
+        allowOffcutReuse: allowReuse
+      });
+      setJobId(response.data.id);
+      setStep(1);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.error || "Failed to create job",
+        variant: "destructive"
+      });
+    }
   };
+
+  const handleUpload = async () => {
+    if (!file || !jobId) return;
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      await api.post(`/jobs/${jobId}/upload`, formData);
+      setStep(2);
+    } catch (error: any) {
+      toast({
+        title: "Upload Failed",
+        description: error.response?.data?.error || "Failed to upload requirements",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleOptimize = async () => {
+    if (!jobId) return;
+    setOptimizing(true);
+    try {
+      await api.post(`/jobs/${jobId}/optimize`);
+      toast({ title: "Optimization Complete", description: "Patterns generated successfully" });
+      navigate(`/jobs/${jobId}`);
+    } catch (error: any) {
+      toast({
+        title: "Optimization Failed",
+        description: error.response?.data?.error || "Failed to run optimization",
+        variant: "destructive"
+      });
+    } finally {
+      setOptimizing(false);
+    }
+  };
+
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -44,8 +92,8 @@ export default function NewOptimization() {
             <div className={cn(
               "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 shrink-0",
               i < step ? "bg-success border-success text-success-foreground" :
-              i === step ? "border-primary text-primary bg-primary/10" :
-              "border-muted text-muted-foreground"
+                i === step ? "border-primary text-primary bg-primary/10" :
+                  "border-muted text-muted-foreground"
             )}>
               {i < step ? <CheckCircle2 className="h-5 w-5" /> : i + 1}
             </div>
@@ -93,7 +141,7 @@ export default function NewOptimization() {
             </div>
             <div className="flex justify-end gap-3">
               <Button variant="outline" onClick={() => navigate("/")}>Cancel</Button>
-              <Button onClick={() => setStep(1)} disabled={!jobName}>Next</Button>
+              <Button onClick={handleCreateJob} disabled={!jobName}>Next</Button>
             </div>
           </div>
         )}
@@ -123,38 +171,15 @@ export default function NewOptimization() {
               )}
             </div>
 
-            {file && (
-              <div className="bg-muted/30 rounded-lg p-4">
-                <h3 className="font-semibold text-sm mb-3">Column Mapping</h3>
-                <table className="data-table">
-                  <thead>
-                    <tr><th>Detected Column</th><th>Map To</th></tr>
-                  </thead>
-                  <tbody>
-                    {['Column A', 'Column B', 'Column C', 'Column D', 'Column E'].map((col, i) => (
-                      <tr key={col}>
-                        <td className="font-mono text-sm">{col}</td>
-                        <td>
-                          <select className="border rounded px-2 py-1 text-sm bg-card">
-                            <option>{['Diameter (mm)', 'Required Length (mm)', 'Quantity', 'Location', 'Work Code'][i]}</option>
-                          </select>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
             <div className="flex justify-between">
               <Button variant="outline" onClick={() => setStep(0)}>Back</Button>
               <div className="flex gap-3">
-                <Button variant="outline" disabled={!file}>Validate Data</Button>
-                <Button onClick={() => setStep(2)} disabled={!file}>Next</Button>
+                <Button onClick={handleUpload} disabled={!file}>Upload & Next</Button>
               </div>
             </div>
           </div>
         )}
+
 
         {step === 2 && (
           <div className="space-y-5">

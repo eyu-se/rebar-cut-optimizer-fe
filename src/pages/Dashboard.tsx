@@ -1,28 +1,49 @@
 import { KpiCard } from "@/components/KpiCard";
-import { recentJobs } from "@/data/mockData";
-import { Briefcase, Box, Trash2, TrendingDown, Search } from "lucide-react";
+import { Briefcase, Box, Trash2, TrendingDown, Search, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import api from "@/lib/api";
+import { format } from "date-fns";
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const totalBars = recentJobs.reduce((s, j) => s + j.totalBarsUsed, 0);
-  const avgWaste = (recentJobs.reduce((s, j) => s + j.wastePercent, 0) / recentJobs.length).toFixed(1);
+
+  const { data: jobs, isLoading } = useQuery({
+    queryKey: ["jobs"],
+    queryFn: async () => {
+      const response = await api.get("/jobs");
+      return response.data;
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  const totalJobs = jobs?.length || 0;
+  // For now, mock the aggregated KPI values or calculate from jobs if data is available
+  // In a real app, we might have a separate dashboard-summary endpoint
+  const totalBars = jobs?.reduce((s: number, j: any) => s + (j.totalBarsUsed || 0), 0) || 0;
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Dashboard</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard title="Total Jobs" value={recentJobs.length} subtitle="+2 this week" trend="up" icon={<Briefcase className="h-5 w-5" />} />
-        <KpiCard title="Total Stock Bars Used" value={totalBars} subtitle="Last 30 days" icon={<Box className="h-5 w-5" />} />
-        <KpiCard title="Total Scrap" value="68,840 mm" subtitle="↓ 12% vs last month" trend="down" icon={<Trash2 className="h-5 w-5" />} />
+        <KpiCard title="Total Jobs" value={totalJobs} subtitle="All time" trend="up" icon={<Briefcase className="h-5 w-5" />} />
+        <KpiCard title="Total Stock Bars Used" value={totalBars} subtitle="Aggregated" icon={<Box className="h-5 w-5" />} />
+        <KpiCard title="Total Scrap" value="0 mm" subtitle="Placeholder" trend="down" icon={<Trash2 className="h-5 w-5" />} />
         <KpiCard
           title="Avg Waste %"
-          value={`${avgWaste}%`}
-          variant={Number(avgWaste) > 5 ? 'danger' : Number(avgWaste) < 3 ? 'success' : 'default'}
+          value={`0%`}
+          variant='default'
           subtitle="Target: <3%"
           icon={<TrendingDown className="h-5 w-5" />}
         />
@@ -43,46 +64,43 @@ export default function Dashboard() {
                 <th>Job Name</th>
                 <th>Project</th>
                 <th>Stock Length</th>
-                <th>Bars Used</th>
-                <th>Waste %</th>
-                <th>Date</th>
                 <th>Status</th>
+                <th>Date</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              {recentJobs.map((job) => (
-                <tr key={job.id}>
-                  <td className="font-medium">{job.jobName}</td>
-                  <td className="text-muted-foreground">{job.projectName}</td>
-                  <td className="font-mono">{job.stockLength.toLocaleString()} mm</td>
-                  <td className="font-mono">{job.totalBarsUsed}</td>
-                  <td>
-                    <span className={cn(
-                      "font-mono font-medium",
-                      job.wastePercent > 5 ? 'text-scrap' : job.wastePercent < 3 ? 'text-success' : 'text-foreground'
-                    )}>
-                      {job.wastePercent}%
-                    </span>
-                  </td>
-                  <td className="text-muted-foreground">{job.dateCreated}</td>
-                  <td>
-                    <span className={cn(
-                      'status-badge',
-                      job.status === 'Draft' && 'status-draft',
-                      job.status === 'Optimized' && 'status-optimized',
-                      job.status === 'Approved' && 'status-approved',
-                    )}>
-                      {job.status}
-                    </span>
-                  </td>
-                  <td>
-                    <Button variant="ghost" size="sm" onClick={() => navigate(`/jobs/${job.id}`)}>
-                      View
-                    </Button>
+              {jobs && jobs.length > 0 ? (
+                jobs.map((job: any) => (
+                  <tr key={job.id}>
+                    <td className="font-medium">{job.name}</td>
+                    <td className="text-muted-foreground">{job.projectName || "N/A"}</td>
+                    <td className="font-mono">{job.stockLengthMm.toLocaleString()} mm</td>
+                    <td>
+                      <span className={cn(
+                        'status-badge',
+                        job.status === 'PENDING' && 'status-draft',
+                        job.status === 'COMPLETED' && 'status-optimized',
+                        job.status === 'FAILED' && 'status-error',
+                      )}>
+                        {job.status}
+                      </span>
+                    </td>
+                    <td className="text-muted-foreground">{format(new Date(job.createdAt), "MMM d, yyyy")}</td>
+                    <td>
+                      <Button variant="ghost" size="sm" onClick={() => navigate(`/jobs/${job.id}`)}>
+                        View
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={6} className="text-center py-8 text-muted-foreground">
+                    No jobs found. Create your first optimization!
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>
@@ -90,3 +108,4 @@ export default function Dashboard() {
     </div>
   );
 }
+

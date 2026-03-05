@@ -1,32 +1,78 @@
+import { useParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import api from "@/lib/api";
+import { toast } from "sonner";
+import { Loader2, Download, Printer, FileText, Box, Trash2, TrendingUp, Gauge } from "lucide-react";
 import { KpiCard } from "@/components/KpiCard";
 import { BarVisualization } from "@/components/BarVisualization";
-import { diameterGroups } from "@/data/mockData";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { Download, Printer, FileText, Box, Trash2, TrendingUp, Gauge } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
-const chartData = diameterGroups.map(g => ({ name: `${g.diameter}mm`, waste: g.wastePercent }));
-
 export default function JobResult() {
-  const totalBars = diameterGroups.reduce((s, g) => s + g.stockBarsUsed, 0);
-  const totalScrap = diameterGroups.reduce((s, g) => s + g.totalScrap, 0);
-  const wastePercent = ((totalScrap / (totalBars * 12000)) * 100).toFixed(1);
-  const efficiency = (100 - Number(wastePercent)).toFixed(1);
+  const { id } = useParams();
+
+  const { data: summary, isLoading: loadingSummary } = useQuery({
+    queryKey: ["job-summary", id],
+    queryFn: async () => {
+      const response = await api.get(`/jobs/${id}/summary`);
+      return response.data;
+    },
+  });
+
+  const { data: patterns, isLoading: loadingPatterns } = useQuery({
+    queryKey: ["job-patterns", id],
+    queryFn: async () => {
+      const response = await api.get(`/jobs/${id}/patterns`);
+      return response.data;
+    },
+  });
+
+  const handleExportExcel = async () => {
+    try {
+      const response = await api.get(`/jobs/${id}/export/excel`, {
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `fabrication-report-${id}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      toast.success("Excel report exported successfully");
+    } catch (error) {
+      toast.error("Failed to export Excel report");
+    }
+  };
+
+  if (loadingSummary || loadingPatterns) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  const { totalBars, totalScrap, wastePercent, efficiency } = summary || {};
+  const diameterGroupsArr = patterns || [];
+  const chartData = diameterGroupsArr.map((g: any) => ({
+    name: `${g.diameterMm}mm`,
+    waste: g.wastePercent
+  }));
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Foundation Beams - Block A</h1>
-          <p className="text-muted-foreground text-sm">Metro Tower Phase 2 — Stock: 12,000mm</p>
+          <h1 className="text-2xl font-bold">{summary?.jobName || "Optimization Result"}</h1>
+          <p className="text-muted-foreground text-sm">Stock: {summary?.stockLengthMm?.toLocaleString()}mm</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm"><Download className="h-4 w-4 mr-1" /> Export PDF</Button>
-          <Button variant="outline" size="sm"><FileText className="h-4 w-4 mr-1" /> Export Excel</Button>
-          <Button variant="outline" size="sm"><Printer className="h-4 w-4 mr-1" /> Print</Button>
+          <Button variant="outline" size="sm" disabled><Download className="h-4 w-4 mr-1" /> Export PDF</Button>
+          <Button variant="outline" size="sm" onClick={handleExportExcel}><FileText className="h-4 w-4 mr-1" /> Export Excel</Button>
+          <Button variant="outline" size="sm" disabled><Printer className="h-4 w-4 mr-1" /> Print</Button>
         </div>
       </div>
 
@@ -41,7 +87,7 @@ export default function JobResult() {
         <TabsContent value="summary" className="space-y-6 mt-4">
           <div className="grid grid-cols-4 gap-4">
             <KpiCard title="Stock Bars Used" value={totalBars} icon={<Box className="h-5 w-5" />} />
-            <KpiCard title="Total Scrap" value={`${totalScrap.toLocaleString()} mm`} icon={<Trash2 className="h-5 w-5" />} />
+            <KpiCard title="Total Scrap" value={`${totalScrap?.toLocaleString()} mm`} icon={<Trash2 className="h-5 w-5" />} />
             <KpiCard title="Waste %" value={`${wastePercent}%`} variant={Number(wastePercent) > 5 ? 'danger' : 'success'} icon={<TrendingUp className="h-5 w-5" />} />
             <KpiCard title="Efficiency" value={`${efficiency}%`} variant="success" icon={<Gauge className="h-5 w-5" />} />
           </div>
@@ -51,17 +97,15 @@ export default function JobResult() {
               <thead>
                 <tr>
                   <th>Diameter</th>
-                  <th>Required Pieces</th>
                   <th>Stock Bars</th>
                   <th>Total Scrap</th>
                   <th>Waste %</th>
                 </tr>
               </thead>
               <tbody>
-                {diameterGroups.map(g => (
-                  <tr key={g.diameter}>
-                    <td className="font-mono font-medium">{g.diameter}mm</td>
-                    <td className="font-mono">{g.requiredPieces}</td>
+                {diameterGroupsArr.map((g: any) => (
+                  <tr key={g.diameterMm}>
+                    <td className="font-mono font-medium">{g.diameterMm}mm</td>
                     <td className="font-mono">{g.stockBarsUsed}</td>
                     <td className="font-mono">{g.totalScrap.toLocaleString()} mm</td>
                     <td>
@@ -74,6 +118,7 @@ export default function JobResult() {
               </tbody>
             </table>
           </div>
+
 
           <div className="bg-card border rounded-lg p-4">
             <h3 className="font-semibold mb-4">Waste % by Diameter</h3>
@@ -100,11 +145,11 @@ export default function JobResult() {
             </div>
           </div>
           <Accordion type="multiple" className="space-y-2">
-            {diameterGroups.map(g => (
-              <AccordionItem key={g.diameter} value={`d${g.diameter}`} className="bg-card border rounded-lg overflow-hidden">
+            {diameterGroupsArr.map((g: any) => (
+              <AccordionItem key={g.diameterMm} value={`d${g.diameterMm}`} className="bg-card border rounded-lg overflow-hidden">
                 <AccordionTrigger className="px-4 py-3 hover:no-underline">
                   <div className="flex items-center gap-4 text-sm">
-                    <span className="font-mono font-bold">Ø{g.diameter}mm</span>
+                    <span className="font-mono font-bold">Ø{g.diameterMm}mm</span>
                     <span className="text-muted-foreground">{g.stockBarsUsed} Bars</span>
                     <span className={cn("font-mono", g.wastePercent > 5 ? 'text-scrap' : 'text-success')}>
                       {g.wastePercent}% Waste
@@ -112,8 +157,8 @@ export default function JobResult() {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="px-4 pb-4">
-                  {g.patterns.map(p => (
-                    <BarVisualization key={p.barId} pattern={p} stockLength={12000} />
+                  {g.patterns.map((p: any) => (
+                    <BarVisualization key={p.barId} pattern={p} stockLength={summary?.stockLengthMm || 12000} />
                   ))}
                 </AccordionContent>
               </AccordionItem>
@@ -122,34 +167,9 @@ export default function JobResult() {
         </TabsContent>
 
         <TabsContent value="fabrication" className="mt-4">
-          <div className="bg-card border rounded-lg p-6">
-            <div className="grid grid-cols-4 gap-4 mb-6 text-sm">
-              <div><p className="text-muted-foreground text-xs">Job Name</p><p className="font-medium">Foundation Beams - Block A</p></div>
-              <div><p className="text-muted-foreground text-xs">Project</p><p className="font-medium">Metro Tower Phase 2</p></div>
-              <div><p className="text-muted-foreground text-xs">Date</p><p className="font-medium">2026-03-03</p></div>
-              <div><p className="text-muted-foreground text-xs">Stock Length</p><p className="font-medium font-mono">12,000 mm</p></div>
-            </div>
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Work Code</th>
-                  <th>Location</th>
-                  <th>Diameter</th>
-                  <th>Cutting Combination</th>
-                  <th>Stock Used</th>
-                  <th>Scrap</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr><td>WC-001</td><td>Grid A1-A4</td><td className="font-mono">10mm</td><td className="font-mono">3000×2 + 2950×2</td><td className="font-mono">1</td><td className="font-mono">100 mm</td></tr>
-                <tr><td>WC-001</td><td>Grid A1-A4</td><td className="font-mono">10mm</td><td className="font-mono">4000×3</td><td className="font-mono">1</td><td className="font-mono">0 mm</td></tr>
-                <tr><td>WC-002</td><td>Grid B1-B6</td><td className="font-mono">12mm</td><td className="font-mono">6000×2</td><td className="font-mono">1</td><td className="font-mono">0 mm</td></tr>
-                <tr><td>WC-002</td><td>Grid B1-B6</td><td className="font-mono">12mm</td><td className="font-mono">7500×1 + 4200×1</td><td className="font-mono">1</td><td className="font-mono">300 mm</td></tr>
-                <tr><td>WC-003</td><td>Grid C2-C8</td><td className="font-mono">16mm</td><td className="font-mono">8000×1 + 3800×1</td><td className="font-mono">1</td><td className="font-mono">200 mm</td></tr>
-                <tr><td>WC-004</td><td>Grid D1-D3</td><td className="font-mono">20mm</td><td className="font-mono">7500×1 + 3200×1</td><td className="font-mono">1</td><td className="font-mono">1300 mm</td></tr>
-                <tr><td>WC-005</td><td>Grid E1-E5</td><td className="font-mono">25mm</td><td className="font-mono">9000×1 + 2500×1</td><td className="font-mono">1</td><td className="font-mono">500 mm</td></tr>
-              </tbody>
-            </table>
+          <div className="bg-card border rounded-lg p-6 text-center py-12 text-muted-foreground">
+            <h3 className="font-semibold text-foreground mb-2">Fabrication Sheet</h3>
+            <p>Use the "Export Excel" button above to download the full fabrication details.</p>
           </div>
         </TabsContent>
 
@@ -157,28 +177,26 @@ export default function JobResult() {
           <div className="bg-card border rounded-lg overflow-x-auto">
             <div className="p-4 border-b flex justify-between items-center">
               <h3 className="font-semibold">Raw Cut Data</h3>
-              <Button variant="outline" size="sm"><Download className="h-4 w-4 mr-1" /> Export CSV</Button>
+              <Button variant="outline" size="sm" onClick={handleExportExcel}><Download className="h-4 w-4 mr-1" /> Export CSV</Button>
             </div>
             <table className="data-table">
               <thead>
                 <tr>
                   <th>Diameter</th>
-                  <th>Required Length</th>
+                  <th>Length</th>
                   <th>Quantity</th>
-                  <th>Allocated Bar ID</th>
-                  <th>Scrap per Bar</th>
+                  <th>Bar ID</th>
                 </tr>
               </thead>
               <tbody>
-                {diameterGroups.flatMap(g =>
-                  g.patterns.flatMap(p =>
-                    p.cuts.map((c, ci) => (
-                      <tr key={`${g.diameter}-${p.barId}-${ci}`}>
-                        <td className="font-mono">{g.diameter}mm</td>
-                        <td className="font-mono">{c.length.toLocaleString()} mm</td>
-                        <td className="font-mono">{c.quantity}</td>
+                {diameterGroupsArr.flatMap((g: any) =>
+                  g.patterns.flatMap((p: any) =>
+                    p.cuts.map((c: any, ci: number) => (
+                      <tr key={`${g.diameterMm}-${p.barId}-${ci}`}>
+                        <td className="font-mono">{g.diameterMm}mm</td>
+                        <td className="font-mono">{c.lengthMm.toLocaleString()} mm</td>
+                        <td className="font-mono">1</td>
                         <td className="font-mono">BAR-{String(p.barId).padStart(3, '0')}</td>
-                        <td className="font-mono">{p.scrap} mm</td>
                       </tr>
                     ))
                   )
@@ -187,6 +205,7 @@ export default function JobResult() {
             </table>
           </div>
         </TabsContent>
+
       </Tabs>
     </div>
   );
