@@ -11,7 +11,7 @@ import { format } from "date-fns";
 export default function Dashboard() {
   const navigate = useNavigate();
 
-  const { data: jobs, isLoading } = useQuery({
+  const { data: jobs, isLoading: jobsLoading } = useQuery({
     queryKey: ["jobs"],
     queryFn: async () => {
       const response = await api.get("/jobs");
@@ -19,7 +19,15 @@ export default function Dashboard() {
     },
   });
 
-  if (isLoading) {
+  const { data: stats, isLoading: statsLoading } = useQuery({
+    queryKey: ["dashboard-stats"],
+    queryFn: async () => {
+      const response = await api.get("/reports/dashboard-stats");
+      return response.data;
+    },
+  });
+
+  if (jobsLoading || statsLoading) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -27,10 +35,7 @@ export default function Dashboard() {
     );
   }
 
-  const totalJobs = jobs?.length || 0;
-  // For now, mock the aggregated KPI values or calculate from jobs if data is available
-  // In a real app, we might have a separate dashboard-summary endpoint
-  const totalBars = jobs?.reduce((s: number, j: any) => s + (j.totalBarsUsed || 0), 0) || 0;
+  const { totalJobs = 0, totalBars = 0, totalScrap = 0, avgWastePercent = 0 } = stats || {};
 
   return (
     <div className="space-y-6">
@@ -38,13 +43,13 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard title="Total Jobs" value={totalJobs} subtitle="All time" trend="up" icon={<Briefcase className="h-5 w-5" />} />
-        <KpiCard title="Total Stock Bars Used" value={totalBars} subtitle="Aggregated" icon={<Box className="h-5 w-5" />} />
-        <KpiCard title="Total Scrap" value="0 mm" subtitle="Placeholder" trend="down" icon={<Trash2 className="h-5 w-5" />} />
+        <KpiCard title="Total Stock Bars Used" value={totalBars.toLocaleString()} subtitle="Aggregated" icon={<Box className="h-5 w-5" />} />
+        <KpiCard title="Total Scrap" value={`${totalScrap.toLocaleString()} mm`} subtitle="Aggregated" trend="down" icon={<Trash2 className="h-5 w-5" />} />
         <KpiCard
           title="Avg Waste %"
-          value={`0%`}
-          variant='default'
-          subtitle="Target: <3%"
+          value={`${avgWastePercent}%`}
+          variant={avgWastePercent > 5 ? 'danger' : 'success'}
+          subtitle="Target: <5%"
           icon={<TrendingDown className="h-5 w-5" />}
         />
       </div>
