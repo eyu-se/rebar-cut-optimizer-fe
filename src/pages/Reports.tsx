@@ -1,7 +1,41 @@
-import { wasteTrend, wasteByDiameter, usageByProject } from "@/data/mockData";
+import { useQuery } from "@tanstack/react-query";
+import api from "@/lib/api";
+import { Loader2 } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 export default function Reports() {
+  const { data: wasteTrend, isLoading: loadingTrend } = useQuery({
+    queryKey: ["waste-trend"],
+    queryFn: async () => {
+      const response = await api.get("/reports/waste-trend");
+      return response.data;
+    },
+  });
+
+  const { data: wasteByDiameter, isLoading: loadingDiameter } = useQuery({
+    queryKey: ["waste-by-diameter"],
+    queryFn: async () => {
+      const response = await api.get("/reports/waste-by-diameter");
+      return response.data;
+    },
+  });
+
+  const { data: usageByProject, isLoading: loadingUsage } = useQuery({
+    queryKey: ["usage-by-project"],
+    queryFn: async () => {
+      const response = await api.get("/reports/usage-by-project");
+      return response.data;
+    },
+  });
+
+  if (loadingTrend || loadingDiameter || loadingUsage) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Reports</h1>
