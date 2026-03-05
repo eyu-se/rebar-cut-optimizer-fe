@@ -31,6 +31,7 @@ export default function NewOptimization() {
     try {
       const response = await api.post("/jobs", {
         name: jobName,
+        projectName: projectName,
         stockLengthMm: stockLength,
         minOffcutToSaveMm: minOffcut,
         allowOffcutReuse: allowReuse

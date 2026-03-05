@@ -67,7 +67,11 @@ export default function JobResult() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">{summary?.jobName || "Optimization Result"}</h1>
-          <p className="text-muted-foreground text-sm">Stock: {summary?.stockLengthMm?.toLocaleString()}mm</p>
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-muted-foreground">{summary?.projectName || "No Project"}</span>
+            <span className="text-muted-foreground/30">•</span>
+            <span className="text-muted-foreground">Stock: {summary?.stockLengthMm?.toLocaleString()}mm</span>
+          </div>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" disabled><Download className="h-4 w-4 mr-1" /> Export PDF</Button>

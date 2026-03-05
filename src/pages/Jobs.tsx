@@ -41,13 +41,14 @@ export default function Jobs() {
         </div>
         <table className="data-table">
           <thead>
-            <tr><th>Job Name</th><th>Stock Length</th><th>Status</th><th>Date Created</th><th></th></tr>
+            <tr><th>Job Name</th><th>Project Name</th><th>Stock Length</th><th>Status</th><th>Date Created</th><th></th></tr>
           </thead>
           <tbody>
             {jobs && jobs.length > 0 ? (
               jobs.map((job: any) => (
                 <tr key={job.id}>
                   <td className="font-medium">{job.name}</td>
+                  <td className="text-muted-foreground">{job.projectName || "—"}</td>
                   <td className="font-mono">{job.stockLengthMm.toLocaleString()} mm</td>
                   <td>
                     <span className={cn(
