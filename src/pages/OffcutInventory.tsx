@@ -98,7 +98,7 @@ export default function OffcutInventory() {
                       variant="ghost"
                       size="sm"
                       className="text-scrap"
-                      onClick={() => deleteMutation.mutate(o.id)}
+                      onClick={() => deleteMutation.mutate(o.ids.join(','))}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
