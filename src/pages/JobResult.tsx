@@ -107,9 +107,9 @@ export default function JobResult() {
                   <tr key={g.diameterMm}>
                     <td className="font-mono font-medium">{g.diameterMm}mm</td>
                     <td className="font-mono">{g.stockBarsUsed}</td>
-                    <td className="font-mono">{g.totalScrap.toLocaleString()} mm</td>
+                    <td className="font-mono">{g.totalScrap?.toLocaleString()} mm</td>
                     <td>
-                      <span className={cn("font-mono font-medium", g.wastePercent > 5 ? 'text-scrap' : g.wastePercent < 3 ? 'text-success' : '')}>
+                      <span className={cn("font-mono font-medium", (g.wastePercent || 0) > 5 ? 'text-scrap' : (g.wastePercent || 0) < 3 ? 'text-success' : '')}>
                         {g.wastePercent}%
                       </span>
                     </td>
@@ -194,9 +194,9 @@ export default function JobResult() {
                     p.cuts.map((c: any, ci: number) => (
                       <tr key={`${g.diameterMm}-${p.barId}-${ci}`}>
                         <td className="font-mono">{g.diameterMm}mm</td>
-                        <td className="font-mono">{c.lengthMm.toLocaleString()} mm</td>
+                        <td className="font-mono">{c.length?.toLocaleString()} mm</td>
                         <td className="font-mono">1</td>
-                        <td className="font-mono">BAR-{String(p.barId).padStart(3, '0')}</td>
+                        <td className="font-mono">BAR-{String(p.barId || '').padStart(3, '0')}</td>
                       </tr>
                     ))
                   )
