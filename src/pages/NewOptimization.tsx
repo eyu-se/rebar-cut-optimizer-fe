@@ -1,12 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
-import { Upload, FileSpreadsheet, CheckCircle2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
 import api from "@/lib/api";
@@ -26,6 +26,21 @@ export default function NewOptimization() {
   const [jobId, setJobId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const { data: settings } = useQuery({
+    queryKey: ["settings"],
+    queryFn: async () => {
+      const response = await api.get("/settings");
+      return response.data;
+    },
+  });
+
+  useEffect(() => {
+    if (settings) {
+      setStockLength(settings.defaultStockLengthMm);
+      setMinOffcut(settings.defaultMinOffcutMm);
+    }
+  }, [settings]);
 
   const handleCreateJob = async () => {
     try {
