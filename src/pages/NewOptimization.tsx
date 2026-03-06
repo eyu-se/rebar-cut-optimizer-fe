@@ -3,8 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
+import { Upload, FileSpreadsheet, CheckCircle2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -20,7 +20,6 @@ export default function NewOptimization() {
   const [stockLength, setStockLength] = useState(12000);
   const [minOffcut, setMinOffcut] = useState(500);
   const [allowReuse, setAllowReuse] = useState(true);
-  const [optMode, setOptMode] = useState("balanced");
   const [file, setFile] = useState<File | null>(null);
   const [optimizing, setOptimizing] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
@@ -134,28 +133,7 @@ export default function NewOptimization() {
               <Switch checked={allowReuse} onCheckedChange={setAllowReuse} />
               <Label>Allow Offcut Reuse</Label>
             </div>
-            <div>
-              <Label className="mb-3 block">Optimization Mode</Label>
-              <RadioGroup value={optMode} onValueChange={setOptMode} className="flex gap-4">
-                {[
-                  { value: 'fast', label: 'Fast (Heuristic)', desc: 'Quick results, good for estimates' },
-                  { value: 'balanced', label: 'Balanced', desc: 'Best tradeoff of speed and quality' },
-                  { value: 'maximum', label: 'Maximum', desc: 'Best possible result, slower' },
-                ].map(m => (
-                  <label key={m.value} className={cn(
-                    "flex-1 border rounded-lg p-4 cursor-pointer transition-colors",
-                    optMode === m.value ? "border-primary bg-primary/5" : "hover:bg-muted/50"
-                  )}>
-                    <div className="flex items-center gap-2">
-                      <RadioGroupItem value={m.value} />
-                      <span className="font-medium text-sm">{m.label}</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1 ml-6">{m.desc}</p>
-                  </label>
-                ))}
-              </RadioGroup>
-            </div>
-            <div className="flex justify-end gap-3">
+            <div className="flex justify-end gap-3 mt-6">
               <Button variant="outline" onClick={() => navigate("/")}>Cancel</Button>
               <Button onClick={handleCreateJob} disabled={!jobName}>Next</Button>
             </div>
@@ -212,10 +190,6 @@ export default function NewOptimization() {
               <div className="bg-muted/30 rounded-lg p-4">
                 <p className="text-xs text-muted-foreground uppercase tracking-wider">Stock Length</p>
                 <p className="font-medium mt-1 font-mono">{stockLength.toLocaleString()} mm</p>
-              </div>
-              <div className="bg-muted/30 rounded-lg p-4">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">Optimization Mode</p>
-                <p className="font-medium mt-1 capitalize">{optMode}</p>
               </div>
               <div className="bg-muted/30 rounded-lg p-4">
                 <p className="text-xs text-muted-foreground uppercase tracking-wider">Unique Diameters</p>

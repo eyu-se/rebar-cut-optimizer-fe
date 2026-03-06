@@ -1,22 +1,25 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, PlusCircle, Loader2, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { format } from "date-fns";
 
 export default function Jobs() {
   const navigate = useNavigate();
+  const [searchTerm, setSearchTerm] = useState("");
 
   const { data: jobs, isLoading } = useQuery({
-    queryKey: ["jobs"],
+    queryKey: ["jobs", searchTerm],
     queryFn: async () => {
-      const response = await api.get("/jobs");
+      const response = await api.get("/jobs", { params: { search: searchTerm } });
       return response.data;
     },
+    placeholderData: keepPreviousData,
   });
 
   const queryClient = useQueryClient();
@@ -52,7 +55,12 @@ export default function Jobs() {
         <div className="p-4 border-b">
           <div className="relative w-72">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search jobs..." className="pl-9 h-9" />
+            <Input
+              placeholder="Search jobs..."
+              className="pl-9 h-9"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
         </div>
         <table className="data-table">

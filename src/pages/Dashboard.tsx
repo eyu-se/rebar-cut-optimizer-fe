@@ -1,22 +1,25 @@
+import { useState } from "react";
 import { KpiCard } from "@/components/KpiCard";
 import { Briefcase, Box, Trash2, TrendingDown, Search, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { format } from "date-fns";
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const [searchTerm, setSearchTerm] = useState("");
 
   const { data: jobs, isLoading: jobsLoading } = useQuery({
-    queryKey: ["jobs"],
+    queryKey: ["jobs", searchTerm],
     queryFn: async () => {
-      const response = await api.get("/jobs");
+      const response = await api.get("/jobs", { params: { search: searchTerm } });
       return response.data;
     },
+    placeholderData: keepPreviousData,
   });
 
   const { data: stats, isLoading: statsLoading } = useQuery({
@@ -59,7 +62,12 @@ export default function Dashboard() {
           <h2 className="font-semibold">Recent Optimization Jobs</h2>
           <div className="relative w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search jobs..." className="pl-9 h-9" />
+            <Input
+              placeholder="Search jobs..."
+              className="pl-9 h-9"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
         </div>
         <div className="overflow-x-auto">
