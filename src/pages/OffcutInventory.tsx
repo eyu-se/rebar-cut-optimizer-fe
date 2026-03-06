@@ -1,13 +1,18 @@
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { Loader2, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 export default function OffcutInventory() {
   const queryClient = useQueryClient();
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState<any>(null);
+  const [deleteCount, setDeleteCount] = useState<number>(1);
 
   const { data: offcuts, isLoading } = useQuery({
     queryKey: ["offcuts"],
@@ -23,7 +28,9 @@ export default function OffcutInventory() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["offcuts"] });
-      toast.success("Offcut deleted successfully");
+      toast.success("Offcut(s) deleted successfully");
+      setDeleteModalOpen(false);
+      setSelectedGroup(null);
     },
     onError: () => {
       toast.error("Failed to delete offcut");
@@ -98,7 +105,11 @@ export default function OffcutInventory() {
                       variant="ghost"
                       size="sm"
                       className="text-scrap"
-                      onClick={() => deleteMutation.mutate(o.ids.join(','))}
+                      onClick={() => {
+                        setSelectedGroup(o);
+                        setDeleteCount(o.quantity); // default to all
+                        setDeleteModalOpen(true);
+                      }}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -115,6 +126,61 @@ export default function OffcutInventory() {
           </tbody>
         </table>
       </div>
+
+      <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Offcuts</DialogTitle>
+            <DialogDescription>
+              This offcut group has {selectedGroup?.quantity} items available. How many would you like to delete?
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4 space-y-4">
+            <div>
+              <label className="text-sm font-medium">Quantity to Delete (Max: {selectedGroup?.quantity})</label>
+              <Input
+                type="number"
+                min={1}
+                max={selectedGroup?.quantity || 1}
+                value={deleteCount}
+                onChange={(e) => setDeleteCount(Math.min(selectedGroup?.quantity || 1, Math.max(1, parseInt(e.target.value) || 1)))}
+                className="mt-1"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setDeleteModalOpen(false)} disabled={deleteMutation.isPending}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (!selectedGroup) return;
+                const idsToDelete = selectedGroup.ids.slice(0, deleteCount).join(',');
+                deleteMutation.mutate(idsToDelete);
+              }}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete {deleteCount} {deleteCount === 1 ? 'Item' : 'Items'}
+            </Button>
+            {selectedGroup?.quantity > 1 && (
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  if (!selectedGroup) return;
+                  deleteMutation.mutate(selectedGroup.ids.join(','));
+                }}
+                disabled={deleteMutation.isPending}
+              >
+                Delete All ({selectedGroup.quantity})
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

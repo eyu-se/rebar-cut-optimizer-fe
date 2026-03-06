@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, PlusCircle, Loader2 } from "lucide-react";
+import { Search, PlusCircle, Loader2, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import api from "@/lib/api";
 import { format } from "date-fns";
 
@@ -16,6 +17,21 @@ export default function Jobs() {
       const response = await api.get("/jobs");
       return response.data;
     },
+  });
+
+  const queryClient = useQueryClient();
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/jobs/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["jobs"] });
+      toast.success("Job deleted successfully");
+    },
+    onError: () => {
+      toast.error("Failed to delete job");
+    }
   });
 
   if (isLoading) {
@@ -61,7 +77,16 @@ export default function Jobs() {
                     </span>
                   </td>
                   <td className="text-muted-foreground">{format(new Date(job.createdAt), "MMM d, yyyy")}</td>
-                  <td><Button variant="ghost" size="sm" onClick={() => navigate(`/jobs/${job.id}`)}>View</Button></td>
+                  <td className="flex gap-2 justify-end">
+                    <Button variant="ghost" size="sm" onClick={() => navigate(`/jobs/${job.id}`)}>View</Button>
+                    <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => {
+                      if (confirm("Are you sure you want to delete this job and all its data?")) {
+                        deleteMutation.mutate(job.id);
+                      }
+                    }}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </td>
                 </tr>
               ))
             ) : (
