@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  frontend:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-yourusername}/rebar-cut-optimizer-fe:latest
+    container_name: rebar_frontend
+    restart: always
+    ports:
+      - "80:80"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
