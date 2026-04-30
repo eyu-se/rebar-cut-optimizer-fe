@@ -50,7 +50,7 @@ jobs:
             cd ~/rebar-cut-frontend
             
             cat << 'EOF' > docker-compose.yml
-            version: '3.8'
+            version: '3.3'
             services:
               frontend:
                 image: ${{ env.REGISTRY }}/${{ github.repository_owner }}/rebar-cut-optimizer-fe:latest
