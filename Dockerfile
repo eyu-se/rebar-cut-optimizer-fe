@@ -6,7 +6,7 @@ RUN bun install
 COPY . .
 # You can pass VITE_API_URL as an arg during build if needed
 ARG VITE_API_URL
-ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_API_URL="http://157.180.20.112:5000/api"
 RUN bun run build
 
 # Nginx Production Stage
